@@ -135,8 +135,6 @@ function HAX_updateMark()
     print("Data saved successfully to file: " .. file_path)
 end
 
-
-
 function GoToLineInBuffer(path, lineNumber)
     -- Check if the buffer for the provided path is already open
     local bufferNumber = vim.fn.bufnr(path)
@@ -150,8 +148,6 @@ function GoToLineInBuffer(path, lineNumber)
         vim.cmd((lineNumber and "normal! " .. lineNumber .. "G" or "normal! 1G"))
     end
 end
-
-
 
 function HAX_findLineNumberInMarks(fileName, lineNumber)
     -- Convert lineNumber to a number if it's a string
@@ -199,9 +195,6 @@ function HAX_findLineNumberInMarks(fileName, lineNumber)
 
     print("Error: File name not found in the table.")
 end
-
-
-
 
 function HAX_removeEntryAtLineNumber(fileName, lineNumber)
     -- Convert lineNumber to a number if it's a string
@@ -263,7 +256,6 @@ function HAX_removeEntryAtLineNumber(fileName, lineNumber)
     print("Error: File name not found in the table.")
 end
 
-
 function HAX_get_marks()
     local result = {}
     local zeroIndent = '   '
@@ -310,7 +302,6 @@ function HAX_get_marks()
 
     return result
 end
-
 
 function HAX_update_paths_table(mode)
     -- Ensure mode is either 0 or 1
@@ -403,9 +394,6 @@ function HAX_update_paths_table(mode)
     end
 end
 
-
-
-
 function HAX_generate_project_info()
     local result = {}
     local zeroIndent = '   '
@@ -458,9 +446,6 @@ function HAX_generate_project_info()
     return result
 end
 
-
-
-
 function set_popup_styles(popup_win)
     -- Define a highlight group for the entire popup window
     vim.api.nvim_command("highlight PopupWindowFull guifg=#DDD guibg=#202020")
@@ -469,7 +454,6 @@ function set_popup_styles(popup_win)
     -- Apply the highlight group to the popup window
     vim.api.nvim_win_set_option(popup_win, "winhl", "Normal:PopupWindowFull,FloatBorder:FloatBorder")
 end
-
 
 -- filename.ext -> .ext : return
 function HAX_get_icon(filename)
@@ -491,25 +475,6 @@ local function tableFullLength(t)
     end
     return count
 end
---
--- function GoToDirectory(x)
---   local totalPaths = tableFullLength(paths)
---   -- print("\nMoved to dir: " .. tostring(x) .. "\n")
---   if x <= totalPaths then
---     vim.cmd("cd " .. paths[x])
---     local filesToOpen = default_open[x]
---     if filesToOpen then
---       for _, filename in ipairs(filesToOpen) do
---         -- local fullpath = vim.fn.fnamemodify(filename, ":p")
---         -- local exists = vim.fn.filereadable(fullpath)
---         -- if exists == 1 then
---           vim.cmd("edit " .. filename)
---         -- end
---       end
---     end
---   end
--- end
-
 
 function GoToDirectory(x)
     -- Get the directory of the init.lua file
@@ -559,7 +524,6 @@ function GoToDirectory(x)
     end
 end
 
-
 function HAX_pathsAndFilesToArray()
     local result = {}
     local zeroIndent = '   '
@@ -588,23 +552,6 @@ function HAX_pathsAndFilesToArray()
     return result
 end
 
-
--- function HAX_longest_string(strings)
---     local max_length = 0
---
---   for _, str in ipairs(strings) do
---       if type(str) == "string" then
---           local length = string.len(str)
---           if length > max_length then
---               max_length = length
---           end
---       end
---   end
---   -- print(max_length)
---   return max_length
--- end
-
-
 function HAX_longest_string(newdat)
     local max_length = 0
 
@@ -621,9 +568,6 @@ function HAX_longest_string(newdat)
     return max_length
 end
 
-
-
-
 -- Define a function to create and display the popup window
 function HAX_open_menu(selected_index, mode)
     local cursor_init = vim.api.nvim_win_get_cursor(0)[1];
@@ -637,7 +581,6 @@ function HAX_open_menu(selected_index, mode)
         -- Open the menu if it's closed
         HAX_MENU_OPEN = true
     end
-
 
     -- Get the selectable items from the global variable 'paths'
     local newdat, height
@@ -677,7 +620,6 @@ function HAX_open_menu(selected_index, mode)
         focusable = true,
     }
 
-
     -- Open the popup window in the context of the current buffer
     local popup_buf = vim.api.nvim_create_buf(false, true)
     local popup_win = vim.api.nvim_open_win(popup_buf, true, popup_opts)
@@ -716,7 +658,7 @@ function HAX_open_menu(selected_index, mode)
         end
 
         -- Move cursor to selected index
-        vim.api.nvim_win_set_cursor(0, {locations[selected_index], 0}) --/ GPT you fix here right inside here fix fix 
+        vim.api.nvim_win_set_cursor(0, {locations[selected_index], 0})
 
         -- Highlight the selected line
         vim.api.nvim_buf_clear_namespace(popup_buf, -1, 0, -1)
@@ -813,6 +755,3 @@ function HAX_open_menu(selected_index, mode)
         update_popup_content()
     end
 end
-
-
-

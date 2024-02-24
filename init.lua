@@ -55,7 +55,7 @@ local kms = {
   { 'n', '<leader>i', ':Telescope live_grep<Enter>', true, true }, -- Live fucking grep
   { 'n', '<C-y>', '3<C-y>M', true, true }, -- demon sp33d
   { 'n', '<C-e>', '3<C-e>M', true, true }, -- demon sp33d
-  { 'n', '<C-g>', '<cmd>lua Save_mark()<Enter>', true, true },
+  { 'n', '<C-g>', '<cmd>lua CYPH_save_mark()<Enter>', true, true },
   { 'n', '<C-p>', '<cmd>lua EZ.menu_toggle("main")<Enter>', true, true },
   { 'n', '<leader><CR>', '<cmd>lua EZ.menu_toggle("marks")<Enter>', true, true },
 } for _, m in ipairs(kms) do vim.api.nvim_set_keymap(m[1], m[2], m[3], { noremap = m[4], silent = m[5] }) end

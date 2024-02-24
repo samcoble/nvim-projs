@@ -351,15 +351,8 @@ function EZ.menu_set_lines(buf, content, padding)
     end
   end
 
-  -- Pad top with new line
-  for i = 1, padding[1] do
-    table.insert(content, 1, '')
-  end
-
-  -- Pad bottom with new line
-  for i = 1, padding[3] do
-    table.insert(content, #content + 1, '')
-  end
+  for i = 1, padding[1] do table.insert(content, 1, '') end -- Pad top with new line
+  for i = 1, padding[3] do table.insert(content, #content + 1, '') end -- Pad bottom with new line
 
   if buf then
     vim.api.nvim_buf_set_option(buf, "modifiable", true) -- [
@@ -370,6 +363,3 @@ function EZ.menu_set_lines(buf, content, padding)
     vim.api.nvim_buf_set_option(buf, "modifiable", false) -- ]
   end
 end ----------------------------------------------------------------------------------------------#
-
-
-

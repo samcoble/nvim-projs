@@ -1,7 +1,6 @@
 
 
--- 
-local default_open_icons =
+local default_open_icons = -- 
 {
   ["html"] = "  ",
   ["py"] = "  ",
@@ -40,8 +39,30 @@ function CYPH_bor(mode)
 
     vim.cmd("augroup TerminalLeave")
     vim.cmd("autocmd!")
-    vim.cmd("autocmd BufLeave <buffer> lua if vim.fn.getbufvar(vim.fn.bufnr('%'), '&buftype') == 'terminal' then CPYH_send_cr(" .. term_buf .. ") end")
+    vim.cmd("autocmd BufLeave <buffer> lua if vim.fn.getbufvar(vim.fn.bufnr('%'), '&buftype') == 'terminal' then CYPH_send_cr(" .. term_buf .. ") end")
     vim.cmd("augroup END")
+end ----------------------------------------------------------------------------------------------#
+
+
+function CYPH_load_my_settings()
+
+  for _, cmd in ipairs {
+    'command! Loadmacros lua CYPH_load_macros()',
+    'command! -nargs=1 Goto lua EZ.go_to_directory(tonumber(<args>))',
+    'highlight CursorLine guibg=#333742',
+    'set number relativenumber',
+    'highlight! link Comment Normal',
+    'highlight Visual guibg=#4e584e',
+    'set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50\\,a:blinkwait700-blinkoff400-blinkon50-Cursor/lCursor\\,sm:block-blinkwait175-blinkoff150-blinkon175',
+    'highlight Normal guibg=#1a1c2280',
+    'set timeoutlen=100'
+  } do
+    vim.cmd(cmd)
+  end
+
+  -- 'highlight Normal guibg=#1a1c22',
+  -- 'highlight Normal guibg=#111317',
+  -- 'set guifont=ProggyVector:h9',
 end ----------------------------------------------------------------------------------------------#
 
 
@@ -49,21 +70,6 @@ function CYPH_load_macros(macros)
   for key, macro_data in pairs(macros) do
     vim.fn.setreg(macro_data.reg_char, macro_data.macro)
   end
-end ----------------------------------------------------------------------------------------------#
-
-
-function CYPH_load_my_settings()
-  vim.cmd[[highlight CursorLine guibg=#333742]]
-  vim.cmd[[set number relativenumber]]
-  vim.cmd[[highlight! link Comment Normal]]
-  vim.cmd('set guifont=ProggyVector:h9')
-  vim.cmd[[highlight Visual guibg=#4e584e]]
-  vim.cmd[[set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50\,a:blinkwait700-blinkoff400-blinkon50-Cursor/lCursor\,sm:block-blinkwait175-blinkoff150-blinkon175]]
-
-  -- vim.cmd[[highlight Normal guibg=#1a1c22]]
-  vim.cmd('highlight Normal guibg=#1a1c2280')
-  -- vim.cmd[[highlight Normal guibg=#111317]]
-  vim.cmd[[set timeoutlen=100]]
 end ----------------------------------------------------------------------------------------------#
 
 
@@ -101,49 +107,44 @@ end ----------------------------------------------------------------------------
 
 
 -- Non EZ function
-function CPYH_goto_mark(m_d)
+function CYPH_goto_mark(m_d)
   local jump_line = m_d.raw[m_d.region].marks[m_d.new_cursor]
   local path = m_d.raw[m_d.region].path
   CYPH_goto_buf_line(path, jump_line)
+  vim.cmd('norm! zz')
 end ----------------------------------------------------------------------------------------------#
 
 
-function CPYH_delete_mark(m_d)
+function CYPH_delete_mark(m_d)
   table.remove(m_d.raw[m_d.region].marks, m_d.new_cursor)
   table.remove(m_d.raw[m_d.region].names, m_d.new_cursor)
   local i_marks = #(m_d.raw[m_d.region].marks)
   if i_marks == 0 then
     table.remove(m_d.raw, m_d.region)
   end
-  -- print("Modified table data:", vim.inspect(m_d.raw))
   EZ.write_table_file(m_d.raw, 'cwd', '/hax_marks.txt')
 end ----------------------------------------------------------------------------------------------#
 
 
-function CPYH_save_mark()
+function CYPH_save_mark()
   local max_line_length = 300
 
   local table_data = EZ.read_table_file('cwd', '/hax_marks.txt')
 
-  -- Get the current buffer's filename and line content
   local current_buffer = vim.fn.bufnr('%')
   local buffer_file = vim.fn.fnamemodify(vim.fn.bufname(current_buffer), ':p')
   local line_content = vim.fn.getline('.')
   local line_number = vim.fn.line('.')
 
-  -- Check if the path already exists in the data table
   local path_exists = false
   for _, entry in ipairs(table_data) do
     if entry.path == buffer_file then
       -- Find the correct position to insert the mark based on line number
       local insert_index = 1
       for i, mark in ipairs(entry.marks) do
-        if line_number < mark then
-          break
-        end
+        if line_number < mark then break end
         insert_index = i + 1
       end
-      -- Insert the mark and its name at the correct position
       table.insert(entry.marks, insert_index, line_number)
       entry.names = entry.names or {}
       table.insert(entry.names, insert_index, line_content:gsub("^%s+", ""):sub(1, max_line_length))
@@ -163,12 +164,10 @@ function CPYH_save_mark()
 end ----------------------------------------------------------------------------------------------#
 
 
-function CPYH_generate_project_info()
-  local result = {}
-  local jumps = {}
-  local track = 1
-  local indent = '   '
+function CYPH_generate_project_info()
 
+  local result, jumps = {}, {}
+  local track, indent = 1,'   '
   local table_data = EZ.read_table_file('root', '/hax_projects.txt');
 
   -- Generate content & jump map
@@ -187,9 +186,9 @@ function CPYH_generate_project_info()
       track = track + 1
 
       for j, filename in ipairs(entry.files) do
-        local line = indent .. '      ├─ ' .. Get_icon(filename) .. filename
+        local line = indent .. '      ├─ ' .. CYPH_get_icon(filename) .. filename
         if j == #entry.files then
-          line = indent .. '      └─ ' .. Get_icon(filename) .. filename
+          line = indent .. '      └─ ' .. CYPH_get_icon(filename) .. filename
         end
         table.insert(result, line)
         track = track + 1
@@ -201,7 +200,7 @@ function CPYH_generate_project_info()
 end ----------------------------------------------------------------------------------------------#
 
 
-function CPYH_get_marks()
+function CYPH_get_marks()
 
   local result, jumps, regions = {}, {}, {}
   local track, region, indent = 1, 0, '  '
@@ -236,8 +235,6 @@ function CPYH_get_marks()
     table.insert(result, "No marks :(")
   end
 
-  -- print(vim.inspect({result,jumps,table_data,regions}))
-  -- print(vim.inspect(regions))
   return {result,jumps,table_data,regions}
 end ----------------------------------------------------------------------------------------------#
 

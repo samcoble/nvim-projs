@@ -1,50 +1,38 @@
 
 -- Define a Lua module
-EZ = {}
-
-EZ.def_opts =
-{
-  relative = "editor",
-  width = 90,
-  height = 30,
-  style = "minimal",
-  col = (vim.o.columns - 90) / 2,
-  row = (vim.o.lines - 30) / 2,
+EZ = {
+  windows = {},
+  current_window = '',
+  initialized = false,
+  def_opts =
+  {
+    relative = "editor",
+    width = 90,
+    height = 30,
+    style = "minimal",
+    col = (vim.o.columns - 90) / 2,
+    row = (vim.o.lines - 30) / 2,
+  }
 }
-
-EZ.windows = {}
-EZ.current_window = ''
-EZ.initialized = false
 
 --------------------------------------------------------------------------------------------------#
 
-function EZ.read_table_file(mode, name) -- name is file name, modes root and cwd
+function EZ.read_table_file(mode, name) -- file name, 'root' or 'cwd'
 
   if mode == 'root' then
-    -- Get the directory of the init.lua file
-    local init_lua_dir = vim.fn.fnamemodify(vim.fn.stdpath('config') .. '/init.lua', ':h')
-
-    -- Construct path to hax_projects.txt
+    local init_lua_dir = vim.fn.fnamemodify(vim.fn.stdpath('config') .. '/init.lua', ':h') -- init used for root
     local projects_table_dir = init_lua_dir .. name
 
-    -- Load the file content
     local file = io.open(projects_table_dir, 'r')
-    if not file then
-      print('EZ: Error loading ' .. name .. ': File not found')
-      return {}
-    end
+    if not file then print('EZ: Error loading ' .. name .. ': File not found') return {} end
 
-    -- Read the file content and parse as Lua table
-    local file_content = file:read("*all")
-    file:close()
+    local file_content = file:read("*all") file:close()
 
     local success, table_data = pcall(loadstring('return ' .. file_content))
     if not success or type(table_data) ~= "table" then
       print('EZ: Error parsing ' .. name .. ': Invalid table format')
       return {}
-    else
-      return table_data -- Final output of table
-    end
+    else return table_data end -- Final output of table
 
   elseif mode == 'cwd' then
     -- Get the current working directory & construct the full file path
@@ -53,8 +41,7 @@ function EZ.read_table_file(mode, name) -- name is file name, modes root and cwd
 
     local file = io.open(file_path, 'r')
     if file then
-      local content = file:read('*all')
-      file:close()
+      local content = file:read('*all') file:close()
       return(content and load('return ' .. content)() or {}) -- Final output of table
     end
   end
@@ -62,8 +49,7 @@ function EZ.read_table_file(mode, name) -- name is file name, modes root and cwd
   return {'EZ: Table data failed to load'} -- If function fails to return prior
 end ----------------------------------------------------------------------------------------------#
 
-
-function EZ.write_table_file(table_data, mode, name) -- name is file name, modes root and cwd
+function EZ.write_table_file(table_data, mode, name) -- file name, 'root' or 'cwd'
 
   local init_dir, file_path = '', ''
 
@@ -77,15 +63,12 @@ function EZ.write_table_file(table_data, mode, name) -- name is file name, modes
 
   local file = io.open(file_path, "w")
   if not file then
-    print("Error: Unable to open file for writing.")
-    return false
+    print("Error: Unable to open file for writing.") return false
   end
-  file:write(vim.inspect(table_data))
-  file:close()
 
+  file:write(vim.inspect(table_data)) file:close()
   return true -- If function fails to return prior
 end ----------------------------------------------------------------------------------------------#
-
 
 function EZ.cloneOpts(obj)
   if type(obj) ~= 'table' then return obj end
@@ -95,7 +78,6 @@ function EZ.cloneOpts(obj)
   end
   return res
 end ----------------------------------------------------------------------------------------------#
-
 
 function EZ.go_to_directory(x)
   paths_table = EZ.read_table_file('root', '/hax_projects.txt')
@@ -113,7 +95,6 @@ function EZ.go_to_directory(x)
   end
 end ----------------------------------------------------------------------------------------------#
 
-
 -- Make buffer & corresponding data for automated functions
 function EZ.make_window(wind) -- (name, maps, get_data)
 
@@ -122,58 +103,35 @@ function EZ.make_window(wind) -- (name, maps, get_data)
 
   EZ.windows[wind.name] =
   {
-    --[[ buffer content ]] buf = buf,
-    --[[ menu bound keymaps]] maps = wind.maps,
-    --[[ menu unique id]] menu_id = nil,
-    --[[ clone defaults]] style = EZ.cloneOpts(EZ.def_opts),
-    --[[ get func]] get_data = wind.get_data,
-    --[[ jump map]] jumps = {},
-    --[[ jump cursor]] cursor = 1,
-    --[[ og table data]] raw = {},
-    --[[ regions ]] regions = {},
-    --[[ open/closed]] menu_state = false
+    buf = buf, menu_state = false, menu_id = nil,
+    cursor = 1, jumps = {}, regions = {}, raw = {},
+    get_data = wind.get_data, maps = wind.maps,
+    style = EZ.cloneOpts(EZ.def_opts)
   }
 
   -- Optional padding
-  if wind.padding then
-    EZ.windows[wind.name].padding = wind.padding
-  else
-    EZ.windows[wind.name].padding = {0, 0, 0, 0} -- default padding
-  end
-
-  -- print(vim.inspect(EZ.windows[wind.name]))
+  EZ.windows[wind.name].padding = wind.padding and wind.padding or {0, 0, 0, 0}
 end ----------------------------------------------------------------------------------------------#
-
 
 -- Return table with all information. Can be read and set.
 function EZ.get_window_table(name)
-  if EZ.windows[name] then
-    -- print(vim.inspect(EZ.windows[name]))
-    return EZ.windows[name]
-  else
-    return nil
-  end
+  if EZ.windows[name] then return EZ.windows[name] else return nil end
 end ----------------------------------------------------------------------------------------------#
-
 
 -- Mapping functions. Automated. Will work with defocus close to simplify.
 function EZ.set_mappings(name)
-  local buf = EZ.get_window_table(name).buf
-  local maps = EZ.get_window_table(name).maps
+  local buf, maps = EZ.get_window_table(name).buf, EZ.get_window_table(name).maps
   for key, cmd in pairs(maps) do
     vim.api.nvim_buf_set_keymap(buf, 'n', key, cmd, { noremap = true })
   end
 end ----------------------------------------------------------------------------------------------#
 
-
 function EZ.reset_mappings(name)
-  local buf = EZ.get_window_table(name).buf
-  local maps = EZ.get_window_table(name).maps
+  local buf, maps = EZ.get_window_table(name).buf, EZ.get_window_table(name).maps
   for key, _ in pairs(maps) do
     vim.api.nvim_buf_set_keymap(buf, 'n', key, key, {})
   end
 end ----------------------------------------------------------------------------------------------#
-
 
 function EZ.menu_move_cursor(jump_line)
   vim.api.nvim_buf_clear_highlight(0, -1, 0, -1)
@@ -186,9 +144,7 @@ function EZ.longest_string(table)
   for _, str in ipairs(table) do
     if type(str) == "string" then
       local length = string.len(str)
-      if length > max_length then
-        max_length = length
-      end
+      if length > max_length then max_length = length end
     end
   end
   return max_length
@@ -196,52 +152,45 @@ end ----------------------------------------------------------------------------
 
 -- Open menu
 function EZ.menu_open(name)
-  if not EZ.initialized then EZ.init() end
+  if not EZ.initialized then EZ.init() end -- call init
   if EZ.get_window_table(name) then
     local menu_data = EZ.get_window_table(name) -- Window obj
-    local buf = EZ.get_window_table(name).buf
-    local style = EZ.get_window_table(name).style
+    if menu_data then
+      local buf = EZ.get_window_table(name).buf
+      local style = EZ.get_window_table(name).style
 
-    if EZ.get_window_table(name).get_data then
-      local data_t = menu_data.get_data() -- Handle per window
-      local data = data_t[1] -- Visual data is local here
+      if EZ.get_window_table(name).get_data then
+        local data_t = menu_data.get_data() -- Handle per window
+        local data = data_t[1] -- Visual data is local here
 
-      EZ.current_window = name
-      menu_data.jumps = data_t[2]
-      menu_data.raw = data_t[3]
-      menu_data.regions = data_t[4]
+        EZ.current_window = name
+        menu_data.jumps, menu_data.raw, menu_data.regions = data_t[2], data_t[3], data_t[4]
 
-      EZ.menu_set_lines(buf, data, menu_data.padding)
-      local new_w = tonumber(EZ.longest_string(vim.api.nvim_buf_get_lines(buf, 0, -1, false)))
-      local new_h = #data
-      style.col = (vim.o.columns - new_w) / 2
-      style.row = (vim.o.lines - 30) / 2
-      style.width = new_w == 0 and 1 or new_w
-      style.height = new_h == 0 and 1 or new_h
+        EZ.menu_set_lines(buf, data, menu_data.padding)
+        local new_w, new_h = tonumber(EZ.longest_string(vim.api.nvim_buf_get_lines(buf, 0, -1, false))), #data
+        style.col, style.row = (vim.o.columns - new_w) / 2, (vim.o.lines - 30) / 2
+        style.width, style.height = new_w==0 and 1 or new_w, new_h==0 and 1 or new_h
 
-    else
-      EZ.menu_set_lines(buf,{'No data'}, {1,2,1,2}) -- default padding, not used yet...
-      style.col = (vim.o.columns - 7) / 2
-      style.row = (vim.o.lines - 1) / 2
-      style.width = 7
-      style.height = 1
-    end
+      else
+        EZ.menu_set_lines(buf,{'No data'}, {1,2,1,2}) -- default padding, not used yet...
+        style.col, style.row = (vim.o.columns - 7) / 2, (vim.o.lines - 1) / 2
+        style.width, style.height = 7, 1
+      end
 
-    menu_data.menu_state = true
-    EZ.set_mappings(name)
-    menu_data.menu_id = vim.api.nvim_open_win(buf, true, style)
+      EZ.set_mappings(name) -- set per window key mappings
+      menu_data.menu_state = true -- set flag open
+      menu_data.menu_id = vim.api.nvim_open_win(buf, true, style) -- window created & logged
 
-    if #menu_data.jumps ~= 0 then
-      local cursor = (menu_data.cursor > #menu_data.jumps) and menu_data.cursor-1 or menu_data.cursor
-      menu_data.cursor = cursor -- update window's value too
-      -- print(vim.inspect(#menu_data.jumps .. " : " .. menu_data.cursor))
-      local pady_offset = menu_data.padding and menu_data.padding[1] or 0
-      local open_jump_line = math.max(0, menu_data.jumps[cursor] + pady_offset - 1) -- resume cursor
-      EZ.menu_move_cursor(open_jump_line)
+      if #menu_data.jumps ~= 0 then
+        local cursor = (menu_data.cursor > #menu_data.jumps) and menu_data.cursor-1 or menu_data.cursor
+        menu_data.cursor = cursor -- update window's value too
+        local pady_offset = menu_data.padding and menu_data.padding[1] or 0
+        local open_jump_line = math.max(0, menu_data.jumps[cursor] + pady_offset - 1) -- resume cursor
+        EZ.menu_move_cursor(open_jump_line)
+      end
     end
   end
 end ----------------------------------------------------------------------------------------------#
-
 
 -- Navigate current window
 function EZ.menu_jump(dir) -- direction
@@ -255,12 +204,11 @@ function EZ.menu_jump(dir) -- direction
       menu_data.cursor = d_y<1 and #menu_data.jumps or (d_j_khaled==0) and #menu_data.jumps or d_j_khaled
       -- menu_data.cursor = (menu_data.cursor+d_y)<1 and #menu_data.jumps or (menu_data.cursor+d_y)%#menu_data.jumps
     else menu_data.cursor = 1 end
+    -- local pady_offset = menu_data.padding and menu_data.padding[1] or 0
+    local jump_line = math.max(0, menu_data.jumps[menu_data.cursor] + menu_data.padding[1] - 1)
+    EZ.menu_move_cursor(jump_line)
   end
-  local pady_offset = menu_data.padding and menu_data.padding[1] or 0
-  local jump_line = math.max(0, menu_data.jumps[menu_data.cursor] + menu_data.padding[1] - 1)
-  EZ.menu_move_cursor(jump_line)
 end ----------------------------------------------------------------------------------------------#
-
 
 -- Handle any selection
 function EZ.menu_return(callback_fn, close_before_use_data, refresh)
@@ -272,10 +220,7 @@ function EZ.menu_return(callback_fn, close_before_use_data, refresh)
 
     local region = 0
     for k, v in ipairs(menu_data.regions) do
-      if cursor <= v then
-        region = k
-        break
-      end
+      if cursor <= v then region = k break end
     end
 
     local new_cursor = cursor -- pass cursor default
@@ -299,7 +244,6 @@ function EZ.menu_return(callback_fn, close_before_use_data, refresh)
   end
 end ----------------------------------------------------------------------------------------------#
 
-
 -- Close menu
 function EZ.menu_close(name)
   if EZ.get_window_table(name).menu_id ~= nil then
@@ -309,7 +253,6 @@ function EZ.menu_close(name)
     EZ.get_window_table(name).menu_id = nil
   end
 end ----------------------------------------------------------------------------------------------#
-
 
 -- Setup auto close on defocus
 function EZ.init()
@@ -322,25 +265,16 @@ function EZ.init()
 end ----------------------------------------------------------------------------------------------#
 
 function EZ.menu_toggle(name)
-  if EZ.get_window_table(name).menu_state then
-    EZ.menu_close(name)
-  else
-    EZ.menu_open(name)
-  end
-  -- Auto close for my prefs
-  EZ.menu_close_all(name) -- useless exclude or crash prevention?
+  if EZ.get_window_table(name).menu_state then EZ.menu_close(name) else EZ.menu_open(name) end
+  EZ.menu_close_all(name) -- Auto close : my prefs
 end ----------------------------------------------------------------------------------------------#
-
 
 -- Close only active to avoid invalid menu_id
 function EZ.menu_close_all(name)
   for key, window in pairs(EZ.windows) do
-    if window.menu_state == true and name ~= tostring(key) then
-      EZ.menu_close(key)
-    end
+    if window.menu_state == true and name ~= tostring(key) then EZ.menu_close(key) end
   end
 end ----------------------------------------------------------------------------------------------#
-
 
 -- Set content of window
 function EZ.menu_set_lines(buf, content, padding)
@@ -356,10 +290,8 @@ function EZ.menu_set_lines(buf, content, padding)
 
   if buf then
     vim.api.nvim_buf_set_option(buf, "modifiable", true) -- [
-
     print("Content loaded.  RAND:" .. math.random(1, 100))
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, content) -- entire window
-
     vim.api.nvim_buf_set_option(buf, "modifiable", false) -- ]
   end
 end ----------------------------------------------------------------------------------------------#

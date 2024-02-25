@@ -25,10 +25,7 @@ end
 function CYPH_bor(mode)
     local current_directory = vim.fn.getcwd()
     local bat_file_path = current_directory .. "/bor.bat"
-
-    local arguments
-    if mode == 1 then arguments = " -c r" else arguments = " -c b" end
-
+    local arguments = (mode == 1 and " -c r " or " -c b ")-- .. vim.loop.getpid()
     local command = ":split | terminal " .. bat_file_path .. arguments
     local term_buf = vim.fn.bufnr('%') -- Store the terminal buffer number
 
@@ -53,12 +50,10 @@ function CYPH_load_my_settings()
     'set number relativenumber',
     'highlight! link Comment Normal',
     'highlight Visual guibg=#4e584e',
-    'set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50\\,a:blinkwait700-blinkoff400-blinkon50-Cursor/lCursor\\,sm:block-blinkwait175-blinkoff150-blinkon175',
     'highlight Normal guibg=#1a1c2280',
-    'set timeoutlen=100'
-  } do
-    vim.cmd(cmd)
-  end
+    'set timeoutlen=100',
+    'set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50\\,a:blinkwait700-blinkoff400-blinkon50-Cursor/lCursor\\,sm:block-blinkwait175-blinkoff150-blinkon175',
+  } do vim.cmd(cmd) end
 
   -- 'highlight Normal guibg=#1a1c22',
   -- 'highlight Normal guibg=#111317',
@@ -66,10 +61,8 @@ function CYPH_load_my_settings()
 end ----------------------------------------------------------------------------------------------#
 
 
-function CYPH_load_macros(macros)
-  for key, macro_data in pairs(macros) do
-    vim.fn.setreg(macro_data.reg_char, macro_data.macro)
-  end
+function CYPH_load_macros(m)
+  for _,v in pairs(m) do vim.fn.setreg(v[1],CYPH_to_macro(v[2])) end
 end ----------------------------------------------------------------------------------------------#
 
 
@@ -79,11 +72,8 @@ function CYPH_to_macro(input_string)
 end ----------------------------------------------------------------------------------------------#
 
 
--- filename.ext -> .ext : return
-function CYPH_get_icon(filename)
-  local extension = filename:match("%.(%w+)$") or "?" -- Extracts the extension without the dot
-  local return_string = default_open_icons[extension] or default_open_icons["?"] -- Default to unknown icon if extension is not found
-  return return_string
+function CYPH_get_icon(filename) -- .ext -> char icon
+  return default_open_icons[filename:match("%.(%w+)$")] or default_open_icons["?"]
 end ----------------------------------------------------------------------------------------------#
 
 

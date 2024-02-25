@@ -1,5 +1,3 @@
-
-
 local default_open_icons = -- 
 {
   ["html"] = "  ",
@@ -227,4 +225,3 @@ function CYPH_get_marks()
 
   return {result,jumps,table_data,regions}
 end ----------------------------------------------------------------------------------------------#
-

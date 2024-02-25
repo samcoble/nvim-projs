@@ -59,6 +59,7 @@ EZ.make_window({
   maps = {
     ["k"] = "<cmd>lua EZ.menu_jump('up')<CR>",
     ["j"] = "<cmd>lua EZ.menu_jump('down')<CR>",
+    ["<Tab>"] = "<Nop>",
     ["<CR>"] = "<cmd>lua EZ.menu_return(CYPH_load_project, true, false)<CR>",
     ["<ESC>"] = "<cmd>lua EZ.menu_close_all('')<CR>"
   },
@@ -72,6 +73,7 @@ EZ.make_window({
     ["k"] = "<cmd>lua EZ.menu_jump('up')<CR>",
     ["j"] = "<cmd>lua EZ.menu_jump('down')<CR>",
     ["d"] = "<cmd>lua EZ.menu_return(CYPH_delete_mark, false, true)<CR>",
+    ["<Tab>"] = "<Nop>",
     ["<CR>"] = "<cmd>lua EZ.menu_return(CYPH_goto_mark, true, false)<CR>",
     ["<ESC>"] = "<cmd>lua EZ.menu_close_all('')<CR>"
   },

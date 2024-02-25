@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <windows.h>
+#include <winuser.h>
 
 void SendKey(WORD keyCode, int mode) {
   INPUT input = { 0 };
@@ -83,13 +84,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
   while (1) {
-    if (GetAsyncKeyState(VK_F10) & 0x8000) {
+    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_SPACE) & 0x8000)) {
 
       GetWindowText(GetForegroundWindow(), currentTitle, sizeof(currentTitle));
       if (strcmp(currentTitle, "Terminal") == 0) {
         SendKeystrokesToWindow(GetForegroundWindow(), &toggle);
       }
-      Sleep(100);
+      // Sleep(100);
     }
 
     if (GetAsyncKeyState(VK_CONTROL) && (GetAsyncKeyState(75) & 0x8000)) {

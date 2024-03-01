@@ -22,23 +22,10 @@ vim.opt.swapfile = false -- doesn't work anyway
 
 dofile(vim.api.nvim_get_runtime_file("EZ.lua", false)[1])
 dofile(vim.api.nvim_get_runtime_file("CYPH.lua", false)[1])
+
 CYPH_load_my_settings()
 vim.api.nvim_command("autocmd VimEnter * lua EZ.menu_toggle('main')") -- auto open
-
-CYPH_load_macros({
-  {'o', '0v_yo:ESC_CHAR:Vpr{o:ESC_CHAR:Vpr}k'},
-  {'l', '$a;:ESC_CHAR:'},
-  {'u', '0v$hd'},
-  {'e', 'v$hd'},
-  {'9', 'k$vF/hdj$a :ESC_CHAR:p'},
-  {'a', 'ggVG'},
-  {'i', '}kkVj_%j'},
-  {'b', ':s/\\(\\w.*\\)/\\1:LEFT::LEFT:'}, -- ez mode
-})
-
--- s/\(\w.*\)/data[0] = "\1";
--- { 'n', '<C-y>', '6<C-y>', true, true }, -- demon sp33d
--- { 'n', '<C-e>', '6<C-e>', true, true }, -- demon sp33d
+CYPH_load_macros('root', '/cyph_macros.txt')
 
 for _, m in ipairs({
   { 'n', '<leader>pk', '<cmd>lua SendCtrlPlus()<Enter>', true, true },
@@ -52,31 +39,67 @@ for _, m in ipairs({
   { 'n', '<C-g>', '<cmd>lua CYPH_save_mark()<Enter>', true, true },
   { 'n', '<C-p>', '<cmd>lua EZ.menu_toggle("main")<Enter>', true, true },
   { 'n', '<leader><CR>', '<cmd>lua EZ.menu_toggle("marks")<Enter>', true, true },
+  { 'n', '<leader>mm', '<cmd>lua EZ.menu_toggle("macros")<Enter>', true, true },
 }) do vim.api.nvim_set_keymap(m[1], m[2], m[3], { noremap = m[4], silent = m[5] }) end
 
 EZ.make_window({
   name = 'main',
   maps = {
-    ["k"] = "<cmd>lua EZ.menu_jump('up')<CR>",
-    ["j"] = "<cmd>lua EZ.menu_jump('down')<CR>",
+    ["k"] = "<cmd>lua EZ.menu_jump('up', 1)<CR>",
+    ["j"] = "<cmd>lua EZ.menu_jump('down', 1)<CR>",
     ["<Tab>"] = "<Nop>",
     ["<CR>"] = "<cmd>lua EZ.menu_return(CYPH_load_project, true, false)<CR>",
     ["<ESC>"] = "<cmd>lua EZ.menu_close_all('')<CR>"
   },
-  padding = {1,1,1,1},
+  padding = {1,1,1,3},
   get_data = CYPH_generate_project_info
 })
 
 EZ.make_window({
   name = 'marks',
   maps = {
-    ["k"] = "<cmd>lua EZ.menu_jump('up')<CR>",
-    ["j"] = "<cmd>lua EZ.menu_jump('down')<CR>",
+    ["k"] = "<cmd>lua EZ.menu_jump('up', 1)<CR>",
+    ["j"] = "<cmd>lua EZ.menu_jump('down', 1)<CR>",
     ["d"] = "<cmd>lua EZ.menu_return(CYPH_delete_mark, false, true)<CR>",
     ["<Tab>"] = "<Nop>",
     ["<CR>"] = "<cmd>lua EZ.menu_return(CYPH_goto_mark, true, false)<CR>",
     ["<ESC>"] = "<cmd>lua EZ.menu_close_all('')<CR>"
   },
-  padding = {1,1,1,1},
-  get_data = CYPH_get_marks
+  padding = {1,2,1,2},
+  get_data = CYPH_get_marks,
+  files = {'cwd', '/hax_marks.txt'},
+  modifiable = false
+})
+
+EZ.make_window({
+  name = 'editor',
+  maps = {
+    ["<Tab>"] = "<Nop>",
+    ["j"] = "<cmd>lua EZ.menu_jump('down', 0)<CR>",
+    ["k"] = "<cmd>lua EZ.menu_jump('down', 0)<CR>",
+    ["<ESC>"] = "<cmd>lua EZ.menu_close_all('')<CR>",
+    ["<CR>"] = "<cmd>lua EZ.menu_return(EZ.menu_set_value, true, false)<CR>",
+  },
+  padding = {1,10,1,10},
+  get_data = EZ.menu_get_value,
+  modifiable = true
+})
+
+EZ.make_window({
+  name = 'macros',
+  maps = {
+    ["k"] = "<cmd>lua EZ.menu_jump('up', 2)<CR>",
+    ["j"] = "<cmd>lua EZ.menu_jump('down', 2)<CR>",
+    ["h"] = "<cmd>lua EZ.menu_jump('up', 1)<CR>",
+    ["l"] = "<cmd>lua EZ.menu_jump('down', 1)<CR>",
+    ["n"] = "<cmd>lua EZ.menu_return(CYPH_new_macro, false, true)<CR>",
+    ["<C-d>"] = "<cmd>lua EZ.menu_return(CYPH_delete_macro, false, true)<CR>",
+    ["<CR>"] = "<cmd>lua EZ.menu_return(EZ.menu_edit_return, false, true)<CR>",
+    ["<Tab>"] = "<Nop>",
+    ["<ESC>"] = "<cmd>lua EZ.menu_close_all('')<CR>"
+  },
+  padding = {1,2,1,2},
+  get_data = CYPH_get_macros,
+  files = {'root', '/cyph_macros.txt'},
+  modifiable = false
 })

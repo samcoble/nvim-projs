@@ -24,7 +24,7 @@ function EZ.read_table_file(mode, name) -- file name, 'root' or 'cwd'
     local projects_table_dir = init_lua_dir .. name
 
     local file = io.open(projects_table_dir, 'r')
-    if not file then print('EZ: Error loading ' .. name .. ': File not found') return {} end
+    if not file then return {'EZ: Error loading ' .. name} end
 
     local file_content = file:read("*all") file:close()
 
@@ -35,18 +35,17 @@ function EZ.read_table_file(mode, name) -- file name, 'root' or 'cwd'
     else return table_data end -- Final output of table
 
   elseif mode == 'cwd' then
-    -- Get the current working directory & construct the full file path
     local current_directory = vim.fn.getcwd()
     local file_path = current_directory .. name
 
     local file = io.open(file_path, 'r')
     if file then
       local content = file:read('*all') file:close()
-      return(content and load('return ' .. content)() or {}) -- Final output of table
+      return(content and load('return ' .. content)() or {'EZ: Error loading ' .. name}) -- Final output of table
     end
   end
 
-  return {'EZ: Table data failed to load'} -- If function fails to return prior
+  return {'EZ: Invalid mode: "'..mode..'", did you misspell it?'} -- If function fails to return prior
 end ----------------------------------------------------------------------------------------------#
 
 function EZ.write_table_file(table_data, mode, name) -- file name, 'root' or 'cwd'
@@ -70,17 +69,15 @@ function EZ.write_table_file(table_data, mode, name) -- file name, 'root' or 'cw
   return true -- If function fails to return prior
 end ----------------------------------------------------------------------------------------------#
 
-function EZ.cloneOpts(obj)
-  if type(obj) ~= 'table' then return obj end
+function EZ.cloneOpts(t)
+  if type(t) ~= 'table' then return t end
   local res = {}
-  for k, v in pairs(obj) do
-    res[k] = EZ.cloneOpts(v)
-  end
+  for k, v in pairs(t) do res[k] = EZ.cloneOpts(v) end
   return res
 end ----------------------------------------------------------------------------------------------#
 
 function EZ.go_to_directory(x)
-  paths_table = EZ.read_table_file('root', '/hax_projects.txt')
+  local paths_table = EZ.read_table_file('root', '/hax_projects.txt')
 
   local selected_path = paths_table[x]
   if not selected_path then print("Error: Invalid index") return end
@@ -95,8 +92,7 @@ function EZ.go_to_directory(x)
   end
 end ----------------------------------------------------------------------------------------------#
 
--- Make buffer & corresponding data for automated functions
-function EZ.make_window(wind) -- (name, maps, get_data)
+function EZ.make_window(wind) -- Make buffer & corresponding data for automated functions
 
   local buf = vim.api.nvim_create_buf(false, true) -- buffer per window (perma)
   vim.api.nvim_buf_set_option(buf, "modifiable", false)
@@ -105,9 +101,11 @@ function EZ.make_window(wind) -- (name, maps, get_data)
   {
     buf = buf, menu_state = false, menu_id = nil,
     cursor = 1, jumps = {}, regions = {}, raw = {},
-    get_data = wind.get_data, maps = wind.maps,
-    style = EZ.cloneOpts(EZ.def_opts)
+    get_data = wind.get_data, files = wind.files,
+    maps = wind.maps, style = EZ.cloneOpts(EZ.def_opts),
+    modifiable = wind.modifiable
   }
+  EZ.edit_value = {value = '', filename = '', cursor = 0} -- log any value chosen to edit and source
 
   -- Optional padding
   EZ.windows[wind.name].padding = wind.padding and wind.padding or {0, 0, 0, 0}
@@ -133,10 +131,11 @@ function EZ.reset_mappings(name)
   end
 end ----------------------------------------------------------------------------------------------#
 
-function EZ.menu_move_cursor(jump_line)
-  vim.api.nvim_buf_clear_highlight(0, -1, 0, -1)
-  vim.api.nvim_win_set_cursor(0, {jump_line, 0})
-  vim.api.nvim_buf_add_highlight(0, -1, 'Visual', jump_line - 1, 0, -1)
+
+function EZ.menu_move_cursor(coord)
+    vim.api.nvim_buf_clear_highlight(0, -1, 0, -1)
+    vim.api.nvim_win_set_cursor(0, {coord[1], coord[2]})
+    vim.api.nvim_buf_add_highlight(0, -1, 'Visual', coord[1] - 1, coord[2] - 0, coord[2] + coord[3] - 0)
 end ----------------------------------------------------------------------------------------------#
 
 function EZ.longest_string(table)
@@ -159,20 +158,20 @@ function EZ.menu_open(name)
       local buf = EZ.get_window_table(name).buf
       local style = EZ.get_window_table(name).style
 
-      if EZ.get_window_table(name).get_data then
-        local data_t = menu_data.get_data() -- Handle per window
+      if menu_data.get_data then
+        local data_t = menu_data.files and menu_data.get_data(menu_data.files) or menu_data.get_data()
         local data = data_t[1] -- Visual data is local here
 
         EZ.current_window = name
         menu_data.jumps, menu_data.raw, menu_data.regions = data_t[2], data_t[3], data_t[4]
 
-        EZ.menu_set_lines(buf, data, menu_data.padding)
+        EZ.menu_set_lines(buf, data, menu_data.padding, menu_data.modifiable)
         local new_w, new_h = tonumber(EZ.longest_string(vim.api.nvim_buf_get_lines(buf, 0, -1, false))), #data
         style.col, style.row = (vim.o.columns - new_w) / 2, (vim.o.lines - 30) / 2
         style.width, style.height = new_w==0 and 1 or new_w, new_h==0 and 1 or new_h
 
       else
-        EZ.menu_set_lines(buf,{'No data'}, {1,2,1,2}) -- default padding, not used yet...
+        EZ.menu_set_lines(buf,{'No data'}, {1,2,1,2}, false) -- default padding, not used yet...
         style.col, style.row = (vim.o.columns - 7) / 2, (vim.o.lines - 1) / 2
         style.width, style.height = 7, 1
       end
@@ -185,28 +184,38 @@ function EZ.menu_open(name)
         local cursor = (menu_data.cursor > #menu_data.jumps) and menu_data.cursor-1 or menu_data.cursor
         menu_data.cursor = cursor -- update window's value too
         local pady_offset = menu_data.padding and menu_data.padding[1] or 0
-        local open_jump_line = math.max(0, menu_data.jumps[cursor] + pady_offset - 1) -- resume cursor
-        EZ.menu_move_cursor(open_jump_line)
+        local padx_offset = menu_data.padding and menu_data.padding[4] or 0
+        local j_line = math.max(0, menu_data.jumps[cursor][1] + pady_offset - 1) -- resume cursor
+        local j_col = menu_data.jumps[cursor][2]
+
+        EZ.menu_move_cursor({j_line, j_col+padx_offset, j_col+menu_data.jumps[cursor][3]})
       end
     end
   end
 end ----------------------------------------------------------------------------------------------#
 
 -- Navigate current window
-function EZ.menu_jump(dir) -- direction
+function EZ.menu_jump(dir, j) -- direction, jumps
 
   local menu_data = EZ.get_window_table(EZ.current_window) -- Load info of currently open window
   if menu_data then
     if #menu_data.jumps > 1 then
-      local d_y = dir=="up" and -1 or 1
+      local d_y = dir=="up" and -j or j
       d_y = (menu_data.cursor+d_y)
       local d_j_khaled = d_y%#menu_data.jumps
       menu_data.cursor = d_y<1 and #menu_data.jumps or (d_j_khaled==0) and #menu_data.jumps or d_j_khaled
       -- menu_data.cursor = (menu_data.cursor+d_y)<1 and #menu_data.jumps or (menu_data.cursor+d_y)%#menu_data.jumps
     else menu_data.cursor = 1 end
     -- local pady_offset = menu_data.padding and menu_data.padding[1] or 0
-    local jump_line = math.max(0, menu_data.jumps[menu_data.cursor] + menu_data.padding[1] - 1)
-    EZ.menu_move_cursor(jump_line)
+    -- local jump_line = math.max(0, menu_data.jumps[menu_data.cursor] + menu_data.padding[1] - 1)
+    -- EZ.menu_move_cursor({jump_line, menu_data.lights[menu_data.cursor][1], menu_data.lights[menu_data.cursor][2]})
+
+        local pady_offset = menu_data.padding and menu_data.padding[1] or 0
+        local padx_offset = menu_data.padding and menu_data.padding[4] or 0
+        local j_line = math.max(0, menu_data.jumps[menu_data.cursor][1] + pady_offset - 1) -- resume cursor
+        local j_col = menu_data.jumps[menu_data.cursor][2]
+
+        EZ.menu_move_cursor({j_line, j_col+padx_offset, j_col+menu_data.jumps[menu_data.cursor][3]})
   end
 end ----------------------------------------------------------------------------------------------#
 
@@ -214,7 +223,7 @@ end ----------------------------------------------------------------------------
 function EZ.menu_return(callback_fn, close_before_use_data, refresh)
 
   local menu_data = EZ.get_window_table(EZ.current_window) -- Load info of currently open window
-  if menu_data and #menu_data.raw > 0 then -- if table {} do not run
+  if menu_data then -- if table {} do not run -- and #menu_data.raw > 0
     local cursor = menu_data.cursor
     if close_before_use_data then EZ.menu_close(EZ.current_window) end
 
@@ -233,7 +242,8 @@ function EZ.menu_return(callback_fn, close_before_use_data, refresh)
       new_cursor = new_cursor,
       region = region,
       regions = menu_data.regions,
-      raw = menu_data.raw
+      raw = menu_data.raw and menu_data.raw or {},
+      files = menu_data.files and menu_data.files or {}
     })
 
     if refresh then
@@ -277,7 +287,7 @@ function EZ.menu_close_all(name)
 end ----------------------------------------------------------------------------------------------#
 
 -- Set content of window
-function EZ.menu_set_lines(buf, content, padding)
+function EZ.menu_set_lines(buf, content, padding, modifiable)
 
   for key, value in pairs(content) do
     if string.len(content[key]) > 0 then
@@ -285,13 +295,43 @@ function EZ.menu_set_lines(buf, content, padding)
     end
   end
 
-  for i = 1, padding[1] do table.insert(content, 1, '') end -- Pad top with new line
-  for i = 1, padding[3] do table.insert(content, #content + 1, '') end -- Pad bottom with new line
+  for _ = 1, padding[1] do table.insert(content, 1, '') end -- Pad top with new line
+  for _ = 1, padding[3] do table.insert(content, #content + 1, '') end -- Pad bottom with new line
 
   if buf then
     vim.api.nvim_buf_set_option(buf, "modifiable", true) -- [
-    print("Content loaded.  RAND:" .. math.random(1, 100))
+    -- print("Content loaded.  RAND:" .. math.random(1, 100))
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, content) -- entire window
-    vim.api.nvim_buf_set_option(buf, "modifiable", false) -- ]
+    if not modifiable then
+      vim.api.nvim_buf_set_option(buf, "modifiable", false)  -- ]
+    else
+      vim.api.nvim_buf_set_option(buf, "modifiable", true)
+    end
   end
+end ----------------------------------------------------------------------------------------------#
+
+function EZ.menu_edit_return(d)
+
+  EZ.get_window_table('editor').raw = d.raw
+  EZ.menu_open('editor')
+  EZ.edit_value.value = d.raw[(d.cursor+d.cursor%2)/2][(1+d.cursor)%2+1]
+  EZ.edit_value.source = d.files[1]
+  EZ.edit_value.filename = d.files[2]
+  EZ.edit_value.cursor = d.cursor
+end ----------------------------------------------------------------------------------------------#
+
+function EZ.menu_set_value() -- everything degenerated here must fix later
+  local buf, new = EZ.get_window_table('editor').buf, ''
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do -- remove whitespace
+    for char in line:gmatch("%S") do new = new .. char end
+  end
+  print(new)
+  local t_d = EZ.read_table_file(EZ.edit_value.source, EZ.edit_value.filename)
+  t_d[(EZ.edit_value.cursor+EZ.edit_value.cursor%2)/2][(1+EZ.edit_value.cursor)%2+1] = new
+  -- t_d[EZ.edit_value.value] = new
+  EZ.write_table_file(t_d, EZ.edit_value.source, EZ.edit_value.filename)
+end ----------------------------------------------------------------------------------------------#
+
+function EZ.menu_get_value()
+  return {{EZ.edit_value.value},{{2,0,0}},EZ.get_window_table('editor'),{}}
 end ----------------------------------------------------------------------------------------------#

@@ -10,15 +10,11 @@ local default_open_icons = -- 
   ["?"] = " ",
 }
 
---------------------------------------------------------------------------------------------------#
-
-
 function CYPH_send_cr(terminal_buffer)
     vim.cmd("buffer " .. terminal_buffer) -- Switch to the terminal buffer
     vim.cmd("norm! <CR>") -- Send <CR>
     vim.cmd("q!")
-end
-
+end ----------------------------------------------------------------------------------------------#
 
 function CYPH_bor(mode)
     local current_directory = vim.fn.getcwd()
@@ -34,10 +30,9 @@ function CYPH_bor(mode)
 
     vim.cmd("augroup TerminalLeave")
     vim.cmd("autocmd!")
-    vim.cmd("autocmd BufLeave <buffer> lua if vim.fn.getbufvar(vim.fn.bufnr('%'), '&buftype') == 'terminal' then CYPH_send_cr(" .. term_buf .. ") end")
+    vim.cmd("autocmd BufLeave <buffer> lua if vim.fn.getbufvar(vim.fn.bufnr('%'), '&buftype') == 'terminal' then CYPH_send_cr("..term_buf..") end")
     vim.cmd("augroup END")
 end ----------------------------------------------------------------------------------------------#
-
 
 function CYPH_load_my_settings()
 
@@ -58,15 +53,16 @@ function CYPH_load_my_settings()
   -- 'set guifont=ProggyVector:h9',
 end ----------------------------------------------------------------------------------------------#
 
-
-function CYPH_load_macros(m)
-  for _,v in pairs(m) do vim.fn.setreg(v[1],CYPH_to_macro(v[2])) end
+function CYPH_to_macro(input_string)
+  local temp_str = string.gsub(input_string, ':L:', vim.api.nvim_replace_termcodes('<Left>', true, false, true))
+  return string.gsub(temp_str, ':E:', vim.api.nvim_replace_termcodes('<Esc>', true, false, true))
 end ----------------------------------------------------------------------------------------------#
 
 
-function CYPH_to_macro(input_string)
-  local temp_str = string.gsub(input_string, ':LEFT:', vim.api.nvim_replace_termcodes('<Left>', true, false, true));
-  return string.gsub(temp_str, ':ESC_CHAR:', vim.api.nvim_replace_termcodes('<Esc>', true, false, true))
+function CYPH_load_macros(mode, filename)
+  local m = EZ.read_table_file(mode, filename)
+  for _,v in pairs(m) do vim.fn.setreg(v[1],CYPH_to_macro(v[2])) end
+  print('! Macro table loaded !')
 end ----------------------------------------------------------------------------------------------#
 
 
@@ -151,32 +147,62 @@ function CYPH_save_mark()
   end
 end ----------------------------------------------------------------------------------------------#
 
+CYPH = {} CYPH.data = {r = {}, t = 1, xyl = {}} CYPH.tracker = {
+  insTxt = function(t,v,n) table.insert(t.r, v) if n==1 then table.insert(t.r,'') end t.t=t.t+n+1 end,
+  insJmp = function(t,i,l) table.insert(t.xyl,{t.t, i, l}) end,
+} ------------------------------------------------------------------------------------------------#
+
+-- if next(macro.marks) ~= nil then end
+function CYPH_get_macros(fn)
+
+  CYPH_load_macros('root', '/cyph_macros.txt') -- must be passed in??
+  local _cy = EZ.cloneOpts(CYPH.data)
+  local t_d,_tr = EZ.read_table_file(fn[1], fn[2]), CYPH.tracker -- table data
+
+  if t_d then
+    _tr.insTxt(_cy,'EZ Macro', 1)
+    for _, macro in ipairs(t_d) do
+      _tr.insTxt(_cy,macro[1]..', '..macro[2], 0)
+      _tr.insJmp(_cy,0,vim.fn.strchars(macro[1])+0)
+      _tr.insJmp(_cy,vim.fn.strchars(macro[1])+2,vim.fn.strchars(macro[2])-3) -- arbitrary
+    end
+  else table.insert(_tr.r, "EZ: Error loading file: "..fn[1]) end
+
+  if #_cy.xyl == 0 then _tr.insTxt("No macros ;(", 0) end
+  return {_cy.r,_cy.xyl,t_d,{}}
+end ----------------------------------------------------------------------------------------------#
+
+-- make function to receive color map and set data
+-- go by line and two coordso
+-- local line_number = 10  -- Change this to the desired line number
+-- local start_column = 5
+-- local end_column = 15
+-- local highlight_color = "#FFFF00"  -- Yellow color (you can change it to any color you prefer)
+-- vim.api.nvim_buf_add_highlight(0, -1, 'MyHighlightGroup', line_number - 1, start_column - 1, end_column, {fg = highlight_color})
 
 function CYPH_generate_project_info()
 
-  local result, jumps = {}, {}
-  local track, indent = 1,'   '
-  local table_data = EZ.read_table_file('root', '/hax_projects.txt');
+  local result, _xyl, track, indent = {}, {}, 1,'  '
+  local table_data = EZ.read_table_file('root', '/hax_projects.txt')
 
-  -- Generate content & jump map
-  for i, entry in ipairs(table_data) do
+  for i, entry in ipairs(table_data) do -- Generate content & jump map
     if i ~= 1 then
       table.insert(result, '')
       track = track + 1
     end
 
-    table.insert(result, indent .. "[" .. i .. "]     '" .. entry.path .. "'")
+    table.insert(result, "    '" .. entry.path .. "'")
     track = track + 1
-    table.insert(jumps, track)
+    table.insert(_xyl, {track, 0, vim.fn.strchars(result[track-1])+4}) -- jump points
 
     if entry.files and type(entry.files) == 'table' then
-      table.insert(result, indent .. "      │")
+      table.insert(result, indent .. "│")
       track = track + 1
 
       for j, filename in ipairs(entry.files) do
-        local line = indent .. '      ├─ ' .. CYPH_get_icon(filename) .. filename
+        local line = indent .. '├─ ' .. CYPH_get_icon(filename) .. filename
         if j == #entry.files then
-          line = indent .. '      └─ ' .. CYPH_get_icon(filename) .. filename
+          line = indent .. '└─ ' .. CYPH_get_icon(filename) .. filename
         end
         table.insert(result, line)
         track = track + 1
@@ -184,18 +210,16 @@ function CYPH_generate_project_info()
     end
   end
 
-  return {result,jumps,table_data,{}}
+  return {result,_xyl,table_data,{}}
 end ----------------------------------------------------------------------------------------------#
-
 
 function CYPH_get_marks()
 
-  local result, jumps, regions = {}, {}, {}
+  local result, _xyl, regions = {}, {}, {}
   local track, region, indent = 1, 0, '  '
   local table_data = EZ.read_table_file('cwd', '/hax_marks.txt')
 
   for i, entry in ipairs(table_data) do
-
     if next(entry.marks) ~= nil then
 
       region = region + #entry.marks
@@ -214,14 +238,27 @@ function CYPH_get_marks()
         local name = entry.names and entry.names[j] or "No Name"
         table.insert(result, indent .. mark .. ": " .. name)
         track = track + 1
-        table.insert(jumps, track)
+        table.insert(_xyl, {track, 1, vim.fn.strchars(result[track-1])}) -- jump points
       end
     end
   end
 
-  if #jumps == 0 then
-    table.insert(result, "No marks :(")
-  end
-
-  return {result,jumps,table_data,regions}
+  if #_xyl == 0 then table.insert(result, "No marks :(") end
+  return {result,_xyl,table_data,regions}
 end ----------------------------------------------------------------------------------------------#
+
+-- replace with entry fn
+function CYPH_new_macro()
+  local t_d = EZ.read_table_file('root', '/cyph_macros.txt')
+  table.insert(t_d, {"0", ":E:iHey:E:"})
+  EZ.write_table_file(t_d, 'root', '/cyph_macros.txt')
+end ----------------------------------------------------------------------------------------------#
+
+-- replace later
+-- function CYPH_delete_macro()
+--   local t_d = EZ.read_table_file('root', '/cyph_macros.txt')
+--   table.remove(t_d, (EZ.edit_value.cursor+EZ.edit_value.cursor%2)/2)
+--   EZ.edit_value.cursor = EZ.edit_value.cursor - 2
+--   EZ.write_table_file(t_d, 'root', '/cyph_macros.txt')
+--   EZ.menu_close_all('')
+-- end ----------------------------------------------------------------------------------------------#

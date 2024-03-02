@@ -52,7 +52,9 @@ EZ.make_window({
     ["<ESC>"] = "<cmd>lua EZ.menu_close_all('')<CR>"
   },
   padding = {1,1,1,3},
-  get_data = CYPH_generate_project_info
+  get_data = CYPH_generate_project_info,
+  files = {'root', '/hax_projects.txt'},
+  modifiable = false
 })
 
 EZ.make_window({
@@ -78,12 +80,13 @@ EZ.make_window({
     ["j"] = "<cmd>lua EZ.menu_jump('down', 0)<CR>",
     ["k"] = "<cmd>lua EZ.menu_jump('down', 0)<CR>",
     ["<ESC>"] = "<cmd>lua EZ.menu_close_all('')<CR>",
-    ["<CR>"] = "<cmd>lua EZ.menu_return(EZ.menu_set_value, true, false)<CR>",
+    ["<CR>"] = "<cmd>lua EZ.menu_return(EZ.menu_set_value, true, false) CYPH_load_macros('root', '/cyph_macros.txt')<CR>",
   },
   padding = {1,10,1,10},
   get_data = EZ.menu_get_value,
   modifiable = true
 })
+   -- must be passed in??
 
 EZ.make_window({
   name = 'macros',
@@ -92,8 +95,8 @@ EZ.make_window({
     ["j"] = "<cmd>lua EZ.menu_jump('down', 2)<CR>",
     ["h"] = "<cmd>lua EZ.menu_jump('up', 1)<CR>",
     ["l"] = "<cmd>lua EZ.menu_jump('down', 1)<CR>",
-    ["n"] = "<cmd>lua EZ.menu_return(CYPH_new_macro, false, true)<CR>",
-    ["<C-d>"] = "<cmd>lua EZ.menu_return(CYPH_delete_macro, false, true)<CR>",
+    ["n"] = "<cmd>lua EZ.menu_new_value({'0', ':E:iHey:E:'})<CR>",
+    ["<C-d>"] = "<cmd>lua EZ.menu_remove_value()<CR>",
     ["<CR>"] = "<cmd>lua EZ.menu_return(EZ.menu_edit_return, false, true)<CR>",
     ["<Tab>"] = "<Nop>",
     ["<ESC>"] = "<cmd>lua EZ.menu_close_all('')<CR>"

@@ -224,13 +224,10 @@ function EZ.menu_return(callback_fn, close_before_use_data, refresh)
 
   local menu_data = EZ.get_window_table(EZ.current_window) -- Load info of currently open window
   if menu_data then -- if table {} do not run -- and #menu_data.raw > 0
-    local cursor = menu_data.cursor
+    local cursor, region = menu_data.cursor, 0
     if close_before_use_data then EZ.menu_close(EZ.current_window) end
 
-    local region = 0
-    for k, v in ipairs(menu_data.regions) do
-      if cursor <= v then region = k break end
-    end
+    for k, v in ipairs(menu_data.regions) do if cursor <= v then region = k break end end
 
     local new_cursor = cursor -- pass cursor default
     if #menu_data.regions > 0 then -- don't use if no regions
@@ -246,12 +243,13 @@ function EZ.menu_return(callback_fn, close_before_use_data, refresh)
       files = menu_data.files and menu_data.files or {}
     })
 
-    if refresh then
-      local current_window = EZ.current_window
-      EZ.menu_close(current_window)
-      EZ.menu_open(current_window)
-    end
+    if refresh then EZ.menu_refresh() end
   end
+end ----------------------------------------------------------------------------------------------#
+
+function EZ.menu_refresh()
+  EZ.menu_close(EZ.current_window)
+  EZ.menu_open(EZ.current_window)
 end ----------------------------------------------------------------------------------------------#
 
 -- Close menu
@@ -300,13 +298,8 @@ function EZ.menu_set_lines(buf, content, padding, modifiable)
 
   if buf then
     vim.api.nvim_buf_set_option(buf, "modifiable", true) -- [
-    -- print("Content loaded.  RAND:" .. math.random(1, 100))
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, content) -- entire window
-    if not modifiable then
-      vim.api.nvim_buf_set_option(buf, "modifiable", false)  -- ]
-    else
-      vim.api.nvim_buf_set_option(buf, "modifiable", true)
-    end
+    vim.api.nvim_buf_set_option(buf, "modifiable", modifiable and modifiable or false)  -- ]
   end
 end ----------------------------------------------------------------------------------------------#
 
@@ -320,18 +313,36 @@ function EZ.menu_edit_return(d)
   EZ.edit_value.cursor = d.cursor
 end ----------------------------------------------------------------------------------------------#
 
-function EZ.menu_set_value() -- everything degenerated here must fix later
+function EZ.menu_set_value() -- everything degenerated here must fix later : should use grid {r,c}
   local buf, new = EZ.get_window_table('editor').buf, ''
   for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do -- remove whitespace
     for char in line:gmatch("%S") do new = new .. char end
   end
-  print(new)
   local t_d = EZ.read_table_file(EZ.edit_value.source, EZ.edit_value.filename)
   t_d[(EZ.edit_value.cursor+EZ.edit_value.cursor%2)/2][(1+EZ.edit_value.cursor)%2+1] = new
-  -- t_d[EZ.edit_value.value] = new
   EZ.write_table_file(t_d, EZ.edit_value.source, EZ.edit_value.filename)
 end ----------------------------------------------------------------------------------------------#
 
 function EZ.menu_get_value()
   return {{EZ.edit_value.value},{{2,0,0}},EZ.get_window_table('editor'),{}}
+end ----------------------------------------------------------------------------------------------#
+
+function EZ.menu_new_value(n)
+  local files = EZ.get_window_table(EZ.current_window).files
+  local t_d = EZ.read_table_file(files[1], files[2])
+  table.insert(t_d, n)
+  EZ.write_table_file(t_d, files[1], files[2])
+  EZ.menu_refresh()
+end ----------------------------------------------------------------------------------------------#
+
+function EZ.menu_remove_value()
+  local t_d = EZ.get_window_table(EZ.current_window)
+  if t_d and t_d.files then
+    local files = t_d.files
+    local f_d = EZ.read_table_file(files[1], files[2])
+    table.remove(f_d, (t_d.cursor+t_d.cursor%2)/2)
+    EZ.get_window_table(EZ.current_window).cursor = EZ.get_window_table(EZ.current_window).cursor - 2 -- cols
+    EZ.write_table_file(f_d, files[1], files[2])
+    EZ.menu_refresh()
+  end
 end ----------------------------------------------------------------------------------------------#

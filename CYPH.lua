@@ -37,6 +37,7 @@ end ----------------------------------------------------------------------------
 function CYPH_load_my_settings()
 
   for _, cmd in ipairs {
+    'cd C:/Users/samco/',
     'command! Loadmacros lua CYPH_load_macros()',
     'command! -nargs=1 Goto lua EZ.go_to_directory(tonumber(<args>))',
     'highlight CursorLine guibg=#333742',
@@ -47,9 +48,6 @@ function CYPH_load_my_settings()
     'set timeoutlen=100',
     'set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50\\,a:blinkwait700-blinkoff400-blinkon50-Cursor/lCursor\\,sm:block-blinkwait175-blinkoff150-blinkon175',
   } do vim.cmd(cmd) end
-
-  -- 'highlight Normal guibg=#1a1c22',
-  -- 'highlight Normal guibg=#111317',
   -- 'set guifont=ProggyVector:h9',
 end ----------------------------------------------------------------------------------------------#
 
@@ -104,10 +102,9 @@ function CYPH_delete_mark(m_d)
 end ----------------------------------------------------------------------------------------------#
 
 function CYPH_save_mark()
+
   local max_line_length = 300
-
   local table_data = EZ.read_table_file('cwd', '/hax_marks.txt')
-
   local current_buffer = vim.fn.bufnr('%')
   local buffer_file = vim.fn.fnamemodify(vim.fn.bufname(current_buffer), ':p')
   local line_content = vim.fn.getline('.')
@@ -116,9 +113,8 @@ function CYPH_save_mark()
   local path_exists = false
   for _, entry in ipairs(table_data) do
     if entry.path == buffer_file then
-      -- Find the correct position to insert the mark based on line number
       local insert_index = 1
-      for i, mark in ipairs(entry.marks) do
+      for i, mark in ipairs(entry.marks) do -- insert mark based on line number
         if line_number < mark then break end
         insert_index = i + 1
       end
@@ -130,8 +126,7 @@ function CYPH_save_mark()
     end
   end
 
-  -- If the path doesn't exist, create a new entry
-  if not path_exists then
+  if not path_exists then -- If no path create a new entry
     table.insert(table_data, { path = buffer_file, marks = { line_number }, names = { [1] = line_content:gsub("^%s+", ""):sub(1, max_line_length) } })
   end
 
@@ -140,12 +135,12 @@ function CYPH_save_mark()
   end
 end ----------------------------------------------------------------------------------------------#
 
-CYPH = {} CYPH.data = {r = {}, t = 1, xyl = {}} CYPH.tracker = {
+CYPH = {} CYPH.data = {r = {}, t = 1, xyl = {}, re = {}, res = 0} CYPH.tracker = {
   insTxt = function(t,v,n) table.insert(t.r, v) if n==1 then table.insert(t.r,'') end t.t=t.t+n+1 end,
   insJmp = function(t,i,l) table.insert(t.xyl,{t.t, i, l}) end,
+  insReg = function(t,e) t.res = t.res + e table.insert(t.re,t.res) end,
 } ------------------------------------------------------------------------------------------------#
 
--- if next(macro.marks) ~= nil then end
 function CYPH_get_macros(fn)
 
   local _cy = EZ.cloneOpts(CYPH.data)
@@ -166,8 +161,7 @@ end ----------------------------------------------------------------------------
 
 function CYPH_generate_project_info(fn)
 
-  local indent = '  '
-  local _cy = EZ.cloneOpts(CYPH.data)
+  local _cy, indent = EZ.cloneOpts(CYPH.data), '  '
   local t_d,_tr = EZ.read_table_file(fn[1], fn[2]), CYPH.tracker -- table data
 
   for i, entry in ipairs(t_d) do -- Generate content & jump map
@@ -175,7 +169,6 @@ function CYPH_generate_project_info(fn)
 
     _tr.insTxt(_cy, "    '" .. entry.path .. "'", 0)
     _tr.insJmp(_cy, 0, vim.fn.strchars(_cy.r[_cy.t-1])+4) -- jump points
-
     if entry.files and type(entry.files) == 'table' then
       _tr.insTxt(_cy, indent .. "│", 0)
       for j, filename in ipairs(entry.files) do
@@ -190,34 +183,24 @@ end ----------------------------------------------------------------------------
 
 function CYPH_get_marks(fn)
 
-  local result, _xyl, regions = {}, {}, {}
-  local track, region, indent = 1, 0, '  '
-  local table_data = EZ.read_table_file('cwd', '/hax_marks.txt')
+  local _cy, indent = EZ.cloneOpts(CYPH.data), '  '
+  local t_d,_tr = EZ.read_table_file(fn[1], fn[2]), CYPH.tracker -- table data
 
-  for i, entry in ipairs(table_data) do
+  for i, entry in ipairs(t_d) do
     if next(entry.marks) ~= nil then
-
-      region = region + #entry.marks
-      table.insert(regions, region)
-
+      _tr.insReg(_cy, #entry.marks) -- region
       if i ~= 1 then
-        table.insert(result, "")
-        track = track + 1
+        _tr.insTxt(_cy, '', 0)
       end
-
-      table.insert(result, entry.path)
-      table.insert(result, "")
-      track = track + 2
-
+      _tr.insTxt(_cy, entry.path, 1)
       for j, mark in ipairs(entry.marks) do
-        local name = entry.names and entry.names[j] or "No Name"
-        table.insert(result, indent .. mark .. ": " .. name)
-        track = track + 1
-        table.insert(_xyl, {track, 1, vim.fn.strchars(result[track-1])}) -- jump points
+        local name = entry.names and entry.names[j] or "No name"
+        _tr.insTxt(_cy, indent .. mark .. ": " .. name, 0)
+        _tr.insJmp(_cy, 1, vim.fn.strchars(_cy.r[_cy.t-1]))
       end
     end
   end
 
-  if #_xyl == 0 then table.insert(result, "No marks :(") end
-  return {result,_xyl,table_data,regions}
+  if #_cy.xyl == 0 then _tr.insTxt(_cy, "No marks :(", 0) end
+  return {_cy.r,_cy.xyl,t_d,_cy.re}
 end ----------------------------------------------------------------------------------------------#

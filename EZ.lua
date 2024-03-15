@@ -1,4 +1,3 @@
-
 -- Define a Lua module
 EZ = {
   windows = {},
@@ -28,7 +27,7 @@ function EZ.read_table_file(mode, name) -- file name, 'root' or 'cwd'
 
     local file_content = file:read("*all") file:close()
 
-    local success, table_data = pcall(loadstring('return ' .. file_content))
+    local success, table_data = pcall(loadstring('return ' .. file_content)) -- fix??
     if not success or type(table_data) ~= "table" then
       print('EZ: Error parsing ' .. name .. ': Invalid table format')
       return {}
@@ -106,8 +105,6 @@ function EZ.make_window(wind) -- Make buffer & corresponding data for automated 
     modifiable = wind.modifiable
   }
   EZ.edit_value = {value = '', filename = '', cursor = 0} -- log any value chosen to edit and source
-
-  -- Optional padding
   EZ.windows[wind.name].padding = wind.padding and wind.padding or {0, 0, 0, 0}
 end ----------------------------------------------------------------------------------------------#
 
@@ -124,13 +121,12 @@ function EZ.set_mappings(name)
   end
 end ----------------------------------------------------------------------------------------------#
 
-function EZ.reset_mappings(name)
+function EZ.reset_mappings(name) -- Set all keymaps key to key
   local buf, maps = EZ.get_window_table(name).buf, EZ.get_window_table(name).maps
   for key, _ in pairs(maps) do
     vim.api.nvim_buf_set_keymap(buf, 'n', key, key, {})
   end
 end ----------------------------------------------------------------------------------------------#
-
 
 function EZ.menu_move_cursor(coord)
     vim.api.nvim_buf_clear_highlight(0, -1, 0, -1)
@@ -141,10 +137,7 @@ end ----------------------------------------------------------------------------
 function EZ.longest_string(table)
   local max_length = 0
   for _, str in ipairs(table) do
-    if type(str) == "string" then
-      local length = string.len(str)
-      if length > max_length then max_length = length end
-    end
+    if type(str) == "string" then if string.len(str) > max_length then max_length = string.len(str) end end
   end
   return max_length
 end ----------------------------------------------------------------------------------------------#
@@ -204,11 +197,8 @@ function EZ.menu_jump(dir, j) -- direction, jumps
       d_y = (menu_data.cursor+d_y)
       local d_j_khaled = d_y%#menu_data.jumps
       menu_data.cursor = d_y<1 and #menu_data.jumps or (d_j_khaled==0) and #menu_data.jumps or d_j_khaled
-      -- menu_data.cursor = (menu_data.cursor+d_y)<1 and #menu_data.jumps or (menu_data.cursor+d_y)%#menu_data.jumps
+
     else menu_data.cursor = 1 end
-    -- local pady_offset = menu_data.padding and menu_data.padding[1] or 0
-    -- local jump_line = math.max(0, menu_data.jumps[menu_data.cursor] + menu_data.padding[1] - 1)
-    -- EZ.menu_move_cursor({jump_line, menu_data.lights[menu_data.cursor][1], menu_data.lights[menu_data.cursor][2]})
 
         local pady_offset = menu_data.padding and menu_data.padding[1] or 0
         local padx_offset = menu_data.padding and menu_data.padding[4] or 0
@@ -270,6 +260,13 @@ function EZ.init()
             autocmd BufEnter <buffer> lua EZ.menu_close_all('')
         augroup END
     ]], false)
+
+  vim.api.nvim_exec([[
+    augroup CustomCommandListener
+        autocmd!
+        autocmd CmdlineEnter : lua EZ.menu_close_all('')
+    augroup END
+  ]], false) -- temp fix
 end ----------------------------------------------------------------------------------------------#
 
 function EZ.menu_toggle(name)

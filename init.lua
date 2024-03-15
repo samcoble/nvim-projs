@@ -24,6 +24,7 @@ dofile(vim.api.nvim_get_runtime_file("EZ.lua", false)[1])
 dofile(vim.api.nvim_get_runtime_file("CYPH.lua", false)[1])
 
 CYPH_load_my_settings()
+
 vim.api.nvim_command("autocmd VimEnter * lua EZ.menu_toggle('main')") -- auto open
 CYPH_load_macros('root', '/cyph_macros.txt')
 
@@ -32,8 +33,8 @@ for _, m in ipairs({
   { 'n', '<leader>pr', '<cmd>lua CYPH_bor(1)<Enter>', true, true },
   { 'n', '<leader>pb', '<cmd>lua CYPH_bor(0)<Enter>', true, true },
   { 'n', '<leader>i', ':Telescope live_grep<Enter>', true, true }, -- Live fucking grep
-  { 'n', '<C-y>', '6k', true, true }, -- demon sp33d
-  { 'n', '<C-e>', '6j', true, true }, -- demon sp33d
+  { 'n', '<C-y>', '6<C-y>', true, true }, -- demon sp33d
+  { 'n', '<C-e>', '6<C-e>', true, true }, -- demon sp33d
   { 'n', '<C-k>', '<C-y>k', true, true },
   { 'n', '<C-j>', '<C-e>j', true, true },
   { 'n', '<C-g>', '<cmd>lua CYPH_save_mark()<Enter>', true, true },

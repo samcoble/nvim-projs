@@ -90,7 +90,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
       if (strcmp(currentTitle, "Terminal") == 0) {
         SendKeystrokesToWindow(GetForegroundWindow(), &toggle);
       }
-      // Sleep(100);
     }
 
     if (GetAsyncKeyState(VK_CONTROL) && (GetAsyncKeyState(75) & 0x8000)) {

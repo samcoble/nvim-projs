@@ -1,0 +1,13 @@
+{ {
+    marks = { 33, 34, 87 },
+    names = { 'dofile(vim.api.nvim_get_runtime_file("EZ.lua", false)[1])', 'dofile(vim.api.nvim_get_runtime_file("init_custom.lua", false)[1])', "{ 'n', '<C-e>', '3<C-e>M', true, true }, -- demon sp33d" },
+    path = "C:\\Users\\samco\\AppData\\Local\\nvim\\init.lua"
+  }, {
+    marks = { 21, 98, 154, 229, 325, 337, 339 },
+    names = { "function EZ.read_table_file(mode, name) -- name is file name, modes root and cwd", "function EZ.make_window(wind) -- (name, maps, get_data)", "function EZ.menu_open(name)", "function EZ.menu_return(callback_fn, close_before_use_data, refresh)", "function EZ.menu_edit_return(d)", "function EZ.menu_get_value()", "function EZ.menu_new_value(n)" },
+    path = "C:\\Users\\samco\\AppData\\Local\\nvim\\EZ.lua"
+  }, {
+    marks = { 56, 168, 272 },
+    names = { "function CYPH_to_macro(in)", "function CYPH_get_macros(fn)", "function CYPH_delete_macro()" },
+    path = "C:\\Users\\samco\\AppData\\Local\\nvim\\CYPH.lua"
+  } }

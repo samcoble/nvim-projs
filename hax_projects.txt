@@ -1,0 +1,34 @@
+{
+{
+	path = "C:/Users/samco/AppData/Local/nvim",
+	files = { "hax_projects.txt" }
+},
+{
+	path = "C:/Users/samco/AppData/Local/nvim",
+	files = { "init.lua", "CYPH.lua", "EZ.lua" }
+},
+{
+	path = "C:/Users/samco/Desktop",
+	files = { "todo.txt" }
+},
+{
+	path = "C:/Users/samco/Desktop/Engine v1",
+	files = { "js/menu.js", "js/js.js" }
+},
+{
+	path = "C:/Users/samco/Desktop/yar",
+	files = { "js.js", "index.html" }
+},
+{
+	path = "C:/Users/samco/Desktop/mover",
+	files = { "mover.py" }
+},
+{
+	path = "C:/Users/samco/Desktop/EagleMode",
+	files = { "bor.bat", "eagle_mode.c" }
+},
+{
+	path = "C:/Users/samco/Desktop/Console3D",
+	files = { "bor.bat", "main.cpp" }
+}
+}

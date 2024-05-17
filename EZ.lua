@@ -160,7 +160,7 @@ function EZ.menu_open(name)
 
         EZ.menu_set_lines(buf, data, menu_data.padding, menu_data.modifiable)
         local new_w, new_h = tonumber(EZ.longest_string(vim.api.nvim_buf_get_lines(buf, 0, -1, false))), #data
-        style.col, style.row = (vim.o.columns - new_w) / 2, (vim.o.lines - 30) / 2
+        style.col, style.row = (vim.o.columns - new_w) / 2, (vim.o.lines - new_h) / 2
         style.width, style.height = new_w==0 and 1 or new_w, new_h==0 and 1 or new_h
 
       else
